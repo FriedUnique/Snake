@@ -77,7 +77,7 @@ class SplashText(GameObject):
         self.closeButton = Button("okButton", Vector2(w, sHeight-50), Vector2(15, 6), text="RESET", onClicked=self.accept, active=False)
 
         self.toggled = False
-        self.acceptFunction = lambda x: x
+        self.acceptFunction = None
 
         super().__init__("splashTextObject", None, Vector2(w, h))
 
@@ -93,13 +93,13 @@ class SplashText(GameObject):
 
     def accept(self, _b):
         # close popup 
-        self.acceptFunction()
+        if self.acceptFunction != None: self.acceptFunction()
 
         self.toggled = False
         self.text.SetActive(False)
         self.closeButton.SetActive(False)
 
-    def loadInfo(self, msg: str, bText: str, f = lambda x: x):
+    def loadInfo(self, msg: str, bText: str, f = None):
         self.text.color = self.textColor
 
         self.acceptFunction = f
