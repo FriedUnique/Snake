@@ -74,15 +74,15 @@ class SplashText(GameObject):
         self.textColor = (255, 0, 0)
 
         self.text = Text("splashText", Vector2(w, h), color=self.textColor, active=False, font=pygame.font.Font(None, 40))
-        self.closeButton = Button("okButton", Vector2(w, sHeight-50), Vector2(15, 6), text="RESET", onClicked=self.accept, active=False)
+        self.closeButton = Button("okButton", Vector2(w, sHeight-50), Vector2(15, 6), text="MENU", onClicked=self.accept, active=False)
 
-        self.toggled = False
+        self.isToggled = False
         self.acceptFunction = None
 
         super().__init__("splashTextObject", None, Vector2(w, h))
 
     def update(self, _screen):
-        if(self.toggled):
+        if(self.isToggled):
             # removed the transparent back
             pygame.draw.rect(_screen, self.bgColor, (0, 0, self.sDim[0], self.sDim[1]))
             self.text.draw(_screen)
@@ -95,20 +95,20 @@ class SplashText(GameObject):
         # close popup 
         if self.acceptFunction != None: self.acceptFunction()
 
-        self.toggled = False
         self.text.SetActive(False)
         self.closeButton.SetActive(False)
+        
+        self.isToggled = False
 
     def loadInfo(self, msg: str, bText: str, f = None):
         self.text.color = self.textColor
 
-        self.acceptFunction = f
-        bTextLen = pygame.font.Font(None, 40).size(bText)[0]
+        if f != None: self.acceptFunction = f
+
         self.closeButton.changeText(bText)
-        self.closeButton.scale = Vector2(int(bTextLen/10)+5, 6)
         self.closeButton.SetActive(True)
 
         self.text.changeText(msg)
         self.text.SetActive(True)
-        self.toggled = True
+        self.isToggled = True
 

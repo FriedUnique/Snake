@@ -1,10 +1,13 @@
+import os
+from utils.base import GameObject
+from utils import Vector2, SplashText, Text, Button
+
 import pygame
 from dataclasses import dataclass
-from typing import List
+from typing import Dict, List
 
 import random
 
-from utils import Vector2, SplashText, Text
 
 #region personalisation
 @dataclass
@@ -24,6 +27,11 @@ class Colors:
 def inputEval(s: str, d: dict):
     s = s.lower()
     lKeys = list(d.keys())
+
+    if s.strip(" ") == "":
+        print(f"No input! Using default: {lKeys[0]}")
+        return lKeys[0]
+
     if s in lKeys:
         return s
 
@@ -31,23 +39,22 @@ def inputEval(s: str, d: dict):
     return lKeys[0]
 
 # difficulty
-levels = {"easy": Level("easy", 7, 3), "hard" : Level("hard", 10, 2), "nigger": Level("nigger", 11, 1)}
-LVL = inputEval(input(f"Select difficulty {tuple(levels.keys())}: "), levels)
+levels = {"easy": Level("easy", 7, 3), "hard" : Level("hard", 10, 2), "nigger": Level("nigger", 15, 1)}
+LVL = "easy" # inputEval(input(f"Select difficulty {tuple(levels.keys())}: "), levels)
 
-cellColors = {"green": Colors("green", (170, 215, 81), (155, 200, 73), (156, 50, 50), (17, 24, 47)), "blue": Colors("blue", (93, 216, 228), (84, 194, 205), (233, 163, 49), (17, 24, 47))} # [chequered0], [chequered1], [appleColor], [snakeColor]
-THEME = inputEval(input(f"Select theme {tuple(cellColors.keys())}: "), cellColors)
-
-
+cellColors = {"green": Colors("green", (170, 215, 81), (155, 200, 73), (156, 50, 50), (17, 24, 47))} # [chequered0], [chequered1], [appleColor], [snakeColor]   , "blue": Colors("blue", (93, 216, 228), (84, 194, 205), (233, 163, 49), (17, 24, 47))
+THEME = "green" #inputEval(input(f"Select theme {tuple(cellColors.keys())}: "), cellColors)
 #endregion
 
 # region init
 pygame.init()
 
-GRIDSIZE = Vector2(20, 15)      # how many cells are in the grid
+GRIDSIZE = Vector2(25, 15)      # how many cells are in the grid
 CELLSIZE = 30                   # visual grid size
 fieldOffset = Vector2(100, 50)  # so the gameField is in the middle
 
 screenX, screenY = (CELLSIZE*GRIDSIZE.x + fieldOffset.x*2, CELLSIZE*GRIDSIZE.y + fieldOffset.y*2)
+print(screenX, screenY)
 screen = pygame.display.set_mode((screenX, screenY))
 pygame.display.set_caption("Snake")
 
@@ -65,6 +72,54 @@ LEFT = (-1, 0)
 RIGHT = (1, 0)
 
 #endregion
+
+class MainMenu(GameObject):
+    def __init__(self, levelDict: Dict[str, Level]):
+        self.isToggled = True
+        self.buttons: Dict[str, Button] = {}
+
+        w, h = int(screenX/2), int(screenY/2)
+        keys = list(levelDict.keys())
+
+        # (screenX/150+75)*(len(keys)*(i+1))
+        # sPos*(i+2.1)
+        xFactor = screenX/150
+        sPos = xFactor + 150
+
+
+        for i in range(len(keys)):
+            self.buttons[keys[i]] = Button(keys[i], Vector2((screenX/150+75)*(len(keys)*(i+1)), screenY-150), 
+                                            Vector2(15, 6), text=keys[i], onClicked=self.choose)
+
+        #self.buttons[keys[0]] = Button(keys[0], Vector2(screenX/2, screenY-150), Vector2(15, 6), text="a", onClicked=self.choose)
+        
+        self.titleText = Text("mainMenuTitle", Vector2(w, h), color=(255, 255, 255), text="Snake")
+
+        super().__init__("MainMenu", None, position=Vector2(w, h))
+    
+    def choose(self, b: Button):
+        global LVL
+        LVL = b.name
+        print(b.name)
+        self.toggle()
+        appleSpawn()
+        snake.reset()
+
+    def drawMenu(self, screen):
+        if not self.isToggled: return
+
+        pygame.draw.rect(screen, (38, 41, 84), (0, 0, screenX, screenY))
+        for i, b in enumerate(self.buttons):
+            self.buttons[b].draw(screen)
+        self.titleText.draw(screen)
+
+    def toggle(self):
+        self.isToggled = not self.isToggled
+
+        for i, b in enumerate(self.buttons):
+            self.buttons[b].isActive = self.isToggled
+
+        self.titleText.isActive = self.isToggled
 
 class Snake:
     def __init__(self):
@@ -91,12 +146,12 @@ class Snake:
 
         # test if collided with wall
         if newPos[0] > screenX - CELLSIZE - fieldOffset.x or newPos[0] < fieldOffset.x or newPos[1] > screenY - CELLSIZE - fieldOffset.y or newPos[1] < fieldOffset.y:
-            splash.loadInfo(f"You died! Score: {score}", "RESET", self.reset)
+            splash.loadInfo(f"You died! Score: {score}", "MENU", mainMenu.toggle)
             return
 
         # test if crash into you self
         if len(self.positions) > 2 and newPos in self.positions[2:]:
-            splash.loadInfo(f"You died! Score: {score}", "RESET", self.reset)
+            splash.loadInfo(f"You died! Score: {score}", "MENU", mainMenu.toggle)
             return
             
 
@@ -124,14 +179,19 @@ class Snake:
 
 class Apple:
     def __init__(self):
-        self.position = (0, 0)
+        self.position = (random.randint(0, GRIDSIZE.x-1) * CELLSIZE + fieldOffset.x, random.randint(0, GRIDSIZE.y-1) * CELLSIZE + fieldOffset.y)
         self.color = cellColors[THEME].appleColor
         self.random_pos()
     
     def random_pos(self):
-        self.position = ()
+        other = []
+        for a in apples:
+            if a == self: continue
+            other.append(a.position)
 
-        while self.position == () and self.position not in snake.positions:
+        self.position = (random.randint(0, GRIDSIZE.x-1) * CELLSIZE + fieldOffset.x, random.randint(0, GRIDSIZE.y-1) * CELLSIZE + fieldOffset.y)
+
+        while self.position in snake.positions and self.position in other:
             self.position = (random.randint(0, GRIDSIZE.x-1) * CELLSIZE + fieldOffset.x, random.randint(0, GRIDSIZE.y-1) * CELLSIZE + fieldOffset.y)
 
     def draw(self):
@@ -140,6 +200,8 @@ class Apple:
 
 
 def drawGrid():
+    #if mainMenu.isToggled == True or splash.isToggled == True: return
+
     for y in range(0, GRIDSIZE.y):
         for x in range(0, GRIDSIZE.x):
             r = pygame.Rect((x*CELLSIZE + fieldOffset.x, y*CELLSIZE + fieldOffset.y), (CELLSIZE, CELLSIZE))
@@ -150,6 +212,13 @@ def drawGrid():
                 pygame.draw.rect(screen, cellColors[THEME].chequered1, r)
 
 def draw():
+    if mainMenu.isToggled == True or splash.isToggled == True:
+        mainMenu.drawMenu(screen)
+        splash.update(screen)
+        return
+
+    screen.fill((255, 255, 255))
+    drawGrid()
     snake.draw()
 
     for apple in apples:
@@ -158,30 +227,35 @@ def draw():
     scoreText.changeText(str(score))
     scoreText.draw(screen)
 
-score = 0
-snake = Snake()
-apples: List[Apple] = []
-def main():
-    global splash, score, snake
-
+def appleSpawn():
+    global apples
+    apples = []
     for i in range(levels[LVL].appleCount):
         apples.append(Apple())
 
-    isRunning = True
-    snake.reset()
 
-    splash.loadInfo("Start Game", "START")
+score = 0
+snake = Snake()
+mainMenu = MainMenu(levels)
+apples: List[Apple] = []
+
+
+def main():
+    global splash, score, snake, mainMenu
+
+    isRunning = True
 
     while isRunning:
 
         # switch tickspeed so UI is not slow.
-        if splash.toggled:
+        if mainMenu.isToggled or splash.isToggled:
             clock.tick(20)
         else:
             clock.tick(levels[LVL].tickSpeed)
 
         # events
         for event in pygame.event.get():
+            GameObject.HandleEventsAll(event)
             if event.type == pygame.QUIT:
                 isRunning = False
 
@@ -203,7 +277,7 @@ def main():
 
 
         # draw and update
-        if not splash.toggled:
+        if mainMenu.isToggled == False and splash.isToggled == False:
             snake.move()
 
             # check apple collision
@@ -214,14 +288,12 @@ def main():
                     apple.random_pos()
             
             # check won
-            if snake.snakeLength == CELLSIZE**2:
-                splash.loadInfo("You won!", "RESET", snake.reset)
+            if snake.snakeLength == GRIDSIZE.x*GRIDSIZE.y:
+                splash.loadInfo(f"You won! Score: {score}", "MENU", snake.reset)
+            
+        draw()
 
-            screen.fill((255, 255, 255))
-            drawGrid()
-            draw() # draw the rest (snake, ...)
-
-        splash.update(screen)
+        GameObject.UpdateAll(screen)
         pygame.display.update()
 
 main()

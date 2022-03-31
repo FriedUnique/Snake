@@ -18,6 +18,7 @@ class Button(GameObject):
         CenterLeft = 4
         CenterMiddle = 5
         CenterRight = 6
+
         BottomLeft = 7
         BottomMiddle = 8
         BottomRight = 9
@@ -63,7 +64,7 @@ class Button(GameObject):
         self.AddEventListener(self.ButtonEvents.OnClick, onClicked)
 
         self.alignText()
-
+        
     def alignText(self):
         textW, textH = self.font.size(self.text)
         x = self.position.x
@@ -110,6 +111,10 @@ class Button(GameObject):
         else:
             raise ValueError(f"The button-state {self.state.name} is not accepted!")
 
+        self.alignText()
+        self.txt_surface = self.font.render(self.text, True, self.textColor)
+        self.sprite = self.txt_surface
+
         surface.blit(self.txt_surface, self.textPos)
     
     def handleEvents(self, event):
@@ -137,6 +142,7 @@ class Button(GameObject):
 
     def changeText(self, newText: str):
         self.text = newText
+        self.alignText()
         self.txt_surface = self.font.render(self.text, True, self.textColor)
 
     def AddEventListener(self, event: ButtonEvents, function):
