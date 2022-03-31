@@ -1,4 +1,4 @@
-from utils import GameObject, Vector2, roundTupleValues
+from utils import Vector2, roundTupleValues
 
 import pygame
 from enum import Enum
@@ -6,9 +6,9 @@ from enum import Enum
 pygame.init()
 
 
-class Button(GameObject):
+class Button:
     """
-    Rect will be constructed around the position provided
+    Custom Button Class. Kinda shit but it does the job. A more thought through on GitHub.
     """
     class TextAlignement(Enum):
         TopLeft = 1
@@ -28,44 +28,88 @@ class Button(GameObject):
         Hover = 2
         Pressing = 3
 
-    class ButtonEvents(Enum):
+    def __init__(self, name = "Button", position = Vector2(0, 0), scale = Vector2(1, 1), text = "Button", textColor = (0, 0, 0), fontSize = 32,
+                normalBackground = (255, 255, 255), onHoverBackground = (220, 230, 235), onPressedBackground = (220, 230, 235), onClicked=None, active=True):
         """
-        OnClick -> Button
+        onClicked is a listener function, will be called when button object is clicked
         """
-        OnClick = 1
+        self.position = Vector2(position.x - int(10*scale.x/2), position.y - int(10*scale.y/2))
+        self.scale = scale
+        self.name = name
+        self.isActive = active
+        self.ta = Button.TextAlignement.CenterMiddle
+        self.state: Button.ButtonStates = Button.ButtonStates.Idle
 
-    def __init__(self, name = "Button", position = Vector2(0, 0), scale = Vector2(1, 1), 
-            text = "Button", textColor = (0, 0, 0), font = pygame.font.Font(None, 32), textAlignment = TextAlignement.CenterMiddle, 
-            normalBackground = (255, 255, 255), onHoverBackground = (220, 230, 235), onPressedBackground = (220, 230, 235), 
-            onClicked = lambda x: x, onHover = lambda y: y, active=True):
+        self.buttonRect = pygame.Rect((self.position.x, self.position.y, 10*scale.x, 10*scale.y))
 
-        position = Vector2(position.x - int(10*scale.x/2), position.y - int(10*scale.y/2))
-
-        self.buttonRect = pygame.Rect((position.x, position.y, 10*scale.x, 10*scale.y))
-        self.state: self.ButtonStates = self.ButtonStates.Idle
         self.textColor = textColor
-        self.font = font
-        self.txt_surface = font.render(text, True, textColor)
-        self.ta = textAlignment
+        self.font = pygame.font.Font(None, fontSize)
 
         self.textPos = (position.x, position.y)
+        self.listener = onClicked
         
         #customization
         self.text = text
-        #? make a dictionary for these values (or list)
-        self.normalBackground = normalBackground
-        self.onHoverBackground = onHoverBackground
-        self.onPressedBackground = onPressedBackground
+        self.changeText(self.text)
 
-        super().__init__(name, self.txt_surface, position, scale, active=active)
+        self.colors = {
+            Button.ButtonStates.Idle: normalBackground,
+            Button.ButtonStates.Hover: onHoverBackground,
+            Button.ButtonStates.Pressing: onPressedBackground
+        }
 
-        # event
-        self.onClickEventListeners = list()
-        self.AddEventListener(self.ButtonEvents.OnClick, onClicked)
-
-        self.alignText()
         
     def alignText(self):
+        textW, textH = self.font.size(self.text)
+        x = self.position.x
+        y = self.position.y
+        w = self.scale.x*10
+        h = self.scale.y*10
+
+        if(self.ta == Button.TextAlignement.CenterMiddle):
+            self.textPos = (x + w/2 - textW/2, y + h/2 - textH/2)
+        else:
+            raise ValueError(f"{self.ta.name} not implemented yet, or it is a bad type!")
+
+        self.textPos = roundTupleValues(self.textPos)
+
+    def draw(self, surface):
+        pygame.draw.rect(surface, self.colors[self.state], self.buttonRect)
+
+        surface.blit(self.txt_surface, self.textPos)
+    
+    def handleEvents(self, event):
+        try:
+            if pygame.mouse.get_pressed()[0]:
+                if self.buttonRect.collidepoint(pygame.mouse.get_pos()):
+                    self.state = Button.ButtonStates.Pressing
+
+                    if self.listener != None: self.listener(self) # feeds one positional argument
+
+                else:
+                    self.state = Button.ButtonStates.Idle
+            elif not pygame.mouse.get_pressed()[0]:
+                if self.buttonRect.collidepoint(pygame.mouse.get_pos()):
+                    self.state = Button.ButtonStates.Hover
+                else:
+                    self.state = Button.ButtonStates.Idle
+        except AttributeError:
+            pass
+    
+    def changeTa(self, alignement: TextAlignement):
+        self.ta = alignement
+        self.alignText()
+
+    def changeText(self, newText: str):
+        self.text = newText
+        self.alignText()
+        self.txt_surface = self.font.render(self.text, True, self.textColor)
+
+    def SetActive(self, activate):
+        self.isActive = activate
+
+"""
+def alignText(self):
         textW, textH = self.font.size(self.text)
         x = self.position.x
         y = self.position.y
@@ -101,62 +145,4 @@ class Button(GameObject):
 
         self.textPos = roundTupleValues(self.textPos)
 
-    def draw(self, surface):
-        if(self.state == self.ButtonStates.Idle):
-            pygame.draw.rect(surface, self.normalBackground, self.buttonRect)
-        elif(self.state == self.ButtonStates.Hover):
-            pygame.draw.rect(surface, self.onHoverBackground, self.buttonRect)
-        elif(self.state == self.ButtonStates.Pressing):
-            pygame.draw.rect(surface, self.onPressedBackground, self.buttonRect)
-        else:
-            raise ValueError(f"The button-state {self.state.name} is not accepted!")
-
-        self.alignText()
-        self.txt_surface = self.font.render(self.text, True, self.textColor)
-        self.sprite = self.txt_surface
-
-        surface.blit(self.txt_surface, self.textPos)
-    
-    def handleEvents(self, event):
-        try:
-            if pygame.mouse.get_pressed()[0]:
-                if self.buttonRect.collidepoint(pygame.mouse.get_pos()):
-                    self.state = self.ButtonStates.Pressing
-                    #* calling all listeners
-                    for listener in self.onClickEventListeners:
-                        listener(self) # calls the event Listener with the parameter self
-
-                else:
-                    self.state = self.ButtonStates.Idle
-            elif not pygame.mouse.get_pressed()[0]:
-                if self.buttonRect.collidepoint(pygame.mouse.get_pos()):
-                    self.state = self.ButtonStates.Hover
-                else:
-                    self.state = self.ButtonStates.Idle
-        except AttributeError:
-            pass
-    
-    def changeTa(self, alignement: TextAlignement):
-        self.ta = alignement
-        self.alignText()
-
-    def changeText(self, newText: str):
-        self.text = newText
-        self.alignText()
-        self.txt_surface = self.font.render(self.text, True, self.textColor)
-
-    def AddEventListener(self, event: ButtonEvents, function):
-        if(event == self.ButtonEvents.OnClick):
-            self.onClickEventListeners.append(function);
-        else:
-            raise ValueError("kadlsamlsdklsa")
-
-    def RemoveEventListener(self, event: ButtonEvents, function):
-        if(event == self.ButtonEvents.OnClick):
-            for i in range(len(self.onClickEventListeners)):
-                if(self.onClickEventListeners[i].__name__ == function.__name__):
-                    del self.onClickEventListeners[i]
-                    break
-        else:
-            raise ValueError("asdnjsakldsajkldsad")
-
+"""
