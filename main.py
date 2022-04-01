@@ -1,10 +1,9 @@
 from utils import Vector2, SplashText, Text, Button
 
 import pygame
+import random
 from dataclasses import dataclass
 from typing import Dict, List
-
-import random
 
 
 @dataclass
@@ -23,17 +22,21 @@ class Colors:
     backColor : tuple
 
 
-levels = {"easy": Level("easy", 7.5, 3), "hard" : Level("hard", 10, 2), "nigger": Level("nigger", 15, 1)}
+levels = {
+    "easy": Level("easy", 7.5, 3), 
+    "hard" : Level("hard", 10, 2), 
+    "insane": Level("insane", 15, 1)
+    }
 LVL = "easy"
 
-colors = {"green": Colors("green", (170, 215, 81), (155, 200, 73), (156, 50, 50), (17, 24, 47), (255, 255, 255))} 
+colors = {"green": Colors("green", (170, 215, 81), (155, 200, 73), (156, 50, 50), (17, 24, 47), (237, 246, 249))} 
 THEME = "green"
 
 # region init
 pygame.init()
 
-GRIDSIZE = Vector2(25, 15)      # how many cells are in the grid
-CELLSIZE = 30                   # visual grid size
+GRIDSIZE = Vector2(15, 15)      # how many cells are in the grid
+CELLSIZE = 30                  # visual grid size
 fieldOffset = Vector2(100, 50)  # so the gameField is in the middle
 
 screenX, screenY = (CELLSIZE*GRIDSIZE.x + fieldOffset.x*2, CELLSIZE*GRIDSIZE.y + fieldOffset.y*2)
@@ -66,7 +69,7 @@ class MainMenu:
         keys = list(levelDict.keys())
 
         for i in range(len(keys)):
-            self.buttons[keys[i]] = Button(keys[i], Vector2((screenX/150+75)*(len(keys)*(i+1)), screenY-150), 
+            self.buttons[keys[i]] = Button(keys[i], Vector2((screenX/150+50)*(len(keys)*(i+1)), screenY-150), 
                                             Vector2(15, 6), text=keys[i], onClicked=self.choose)
 
         self.titleText = Text(Vector2(w, h), color=(255, 255, 255), text="Snake")
@@ -169,10 +172,11 @@ class Apple:
             if a == self: continue
             other.append(a.position)
 
-        self.position = (random.randint(0, GRIDSIZE.x-1) * CELLSIZE + fieldOffset.x, random.randint(0, GRIDSIZE.y-1) * CELLSIZE + fieldOffset.y)
-
-        while self.position in snake.positions and self.position in other:
+        
+        while True:
             self.position = (random.randint(0, GRIDSIZE.x-1) * CELLSIZE + fieldOffset.x, random.randint(0, GRIDSIZE.y-1) * CELLSIZE + fieldOffset.y)
+            if self.position not in snake.positions and self.position not in other:
+                break
 
     def draw(self):
         r = pygame.Rect(self.position, (CELLSIZE, CELLSIZE))
@@ -236,19 +240,14 @@ def main():
                 isRunning = False
 
             elif event.type == pygame.KEYDOWN:
-                #debug, cheater who uses this
-                if event.key == pygame.K_SPACE:
-                    snake.snakeLength += 1
-                    score += 1
-
-                if event.key == pygame.K_UP:
+                # movement
+                if event.key == pygame.K_UP or event.key == pygame.K_w:
                     snake.turn(UP)
-                elif event.key == pygame.K_DOWN:
+                elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
                     snake.turn(DOWN)
-
-                elif event.key == pygame.K_LEFT:
+                elif event.key == pygame.K_LEFT or event.key == pygame.K_a:
                     snake.turn(LEFT)
-                elif event.key == pygame.K_RIGHT:
+                elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                     snake.turn(RIGHT)
 
 
@@ -270,7 +269,6 @@ def main():
             
         draw()
 
-        # updates last because they can be layered on top
         mainMenu.update(screen)
         pygame.display.update()
 
