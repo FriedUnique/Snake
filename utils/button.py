@@ -74,17 +74,20 @@ class Button:
         self.textPos = roundTupleValues(self.textPos)
 
     def draw(self, surface):
+        if not self.isActive: return
+        
         pygame.draw.rect(surface, self.colors[self.state], self.buttonRect)
-
         surface.blit(self.txt_surface, self.textPos)
     
-    def handleEvents(self, event):
+    def handleEvents(self, _e):
+        if not self.isActive: return
+
         try:
             if pygame.mouse.get_pressed()[0]:
                 if self.buttonRect.collidepoint(pygame.mouse.get_pos()):
                     self.state = Button.ButtonStates.Pressing
 
-                    if self.listener != None: self.listener(self) # feeds one positional argument
+                    if self.listener != None: self.listener(self) # feeds one positional argument, the button object
 
                 else:
                     self.state = Button.ButtonStates.Idle
