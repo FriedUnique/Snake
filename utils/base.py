@@ -44,7 +44,7 @@ class Vector2:
 
 
 
-    def Dot(vec1, vec2):
+    def dot(vec1, vec2):
         return vec1.x * vec2.x + vec1.y * vec2.y
 
     def sqrLenght(vec):
@@ -80,20 +80,3 @@ def roundTupleValues(t: tuple):
         ts[i] = round(ts[i])
 
     return tuple(ts)
-
-#! unused
-def inputEval(s: str, d: dict):
-    # inputEval(input(f"Select difficulty {tuple(levels.keys())}: "), levels)
-    # "blue": Colors("blue", (93, 216, 228), (84, 194, 205), (233, 163, 49), (17, 24, 47))
-    s = s.lower()
-    lKeys = list(d.keys())
-
-    if s.strip(" ") == "":
-        print(f"No input! Using default: {lKeys[0]}")
-        return lKeys[0]
-
-    if s in lKeys:
-        return s
-
-    print(f"Bad input! Using default: {lKeys[0]}")
-    return lKeys[0]
